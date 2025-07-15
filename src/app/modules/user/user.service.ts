@@ -39,7 +39,7 @@ const updateUser = async(userId: string, payload: Partial<IUser>, decodedToken :
     if(decodedToken.role === Role.USER || decodedToken.role === Role.GUIDE){
        throw new AppError(httpStatus.FORBIDDEN, "You are not authorized")
     }
-    if(payload.role === Role.SUPER_ADMIN || decodedToken.role === Role.ADMIN){
+    if(payload.role === Role.SUPER_ADMIN && decodedToken.role === Role.ADMIN){
        throw new AppError(httpStatus.FORBIDDEN, "You are not authorized")
     }
   }
@@ -51,7 +51,7 @@ const updateUser = async(userId: string, payload: Partial<IUser>, decodedToken :
   if(payload.password){
     payload.password = await bcryptjs.hash(payload.password, envVars.BCRYPT_SALT_ROUND)
   }
-  const newUpdatedUser = await User.findByIdAndUpdate(userId,payload,{upsert: true, runValidators: true})
+  const newUpdatedUser = await User.findByIdAndUpdate(userId,payload,{new: true, runValidators: true})
   return newUpdatedUser
 }
 
