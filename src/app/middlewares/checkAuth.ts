@@ -3,6 +3,9 @@ import { JwtPayload } from "jsonwebtoken";
 import { verifyToken } from "../utils/jwt";
 import AppError from "../errorHelpers/AppError";
 import { envVars } from "../config/env";
+import { User } from "../modules/user/user.model";
+import httpStatus from "http-status-codes"
+import { IsActive } from "../modules/user/user.interface";
 
 export const checkAuth =
   (...authRole: string[]) =>
@@ -13,11 +16,30 @@ export const checkAuth =
       if (!accessToken) {
         throw new AppError(403, "No Token Recieved");
       }
-      const verifiedToken = verifyToken(accessToken,envVars.JWT_ACCESS_SECRET) as JwtPayload;
+      const verifiedToken = verifyToken(
+        accessToken,
+        envVars.JWT_ACCESS_SECRET
+      ) as JwtPayload;
+      const isUserExist = await User.findOne({
+        email: verifiedToken.email,
+      });
+
+      if (!isUserExist) {
+        throw new AppError(httpStatus.BAD_REQUEST, "User does not Exist");
+      }
+      if (
+        isUserExist.isActive === IsActive.BLOCKED ||
+        isUserExist.isActive === IsActive.INACTIVE
+      ) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          `User is ${isUserExist.isActive}`
+        );
+      }
       if (!authRole.includes(verifiedToken.role)) {
         throw new AppError(403, "You are not permitted to view this route!!");
       }
-      req.user = verifiedToken
+      req.user = verifiedToken;
       next();
     } catch (error) {
       next(error);
