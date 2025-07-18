@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import passport from "passport";
 import {
@@ -8,6 +9,46 @@ import {
 import { envVars } from "./env";
 import { User } from "../modules/user/user.model";
 import { Role } from "../modules/user/user.interface";
+import { Strategy as localStrategy } from "passport-local";
+import bcryptjs from "bcryptjs";
+
+passport.use(
+  new localStrategy(
+    {
+      usernameField: "email",
+      passwordField: "password",
+    },
+    async (email: string, password: string, done) => {
+      try {
+        const isUserExist = await User.findOne({ email });
+        if (!isUserExist) {
+          return done(null, false, { message: "User does not exist" });
+        }
+        const isGoogleAuthenticated = isUserExist.auths.some(
+          (providerObjects) => providerObjects.provider === "google"
+        );
+        if (isGoogleAuthenticated && !isUserExist.password) {
+          return done(null, false, {
+            message:
+              "You have authenticated thorough Google. So if you want to login with credentials, then at first login with google and set a password for your gmail and then you can login with email and password.",
+          });
+        }
+
+        const isPasswordMatched = await bcryptjs.compare(
+          password as string,
+          isUserExist.password as string
+        );
+        if (!isPasswordMatched) {
+          return done(null, false, { message: "Incorrect password" });
+        }
+        return done(null, isUserExist);
+      } catch (error) {
+        console.log(error);
+        done(error);
+      }
+    }
+  )
+);
 
 passport.use(
   new googleStrategy(
@@ -27,7 +68,7 @@ passport.use(
         if (!email) {
           return done(null, false, { message: "No email found" });
         }
-        let user = await User.findOne({email});
+        let user = await User.findOne({ email });
         if (!user) {
           user = await User.create({
             email,
@@ -45,7 +86,6 @@ passport.use(
         }
         return done(null, user);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.log(error);
         return done(error);
       }
