@@ -44,7 +44,6 @@ const credentialsLogin = catchAsync(
         },
       });
     })(req,res, next)
-    // const loginInfo = await AuthServices.credentialsLogin(req.body);
   }
 )
 const getNewAccessToken = catchAsync(
